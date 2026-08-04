@@ -1,0 +1,19 @@
+{
+  "name": "citrus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Citrus monorepo — API, web, and native UIs with WL-Universe-style deploy",
+  "workspaces": [
+    "packages/web",
+    "packages/native"
+  ],
+  "scripts": {
+    "dev:api": "cd packages/api && uvicorn app.main:app --reload --port 8000",
+    "dev:web": "npm run start -w citrus-web",
+    "dev:native": "npm run start -w citrusnative",
+    "test:api": "cd packages/api && python -m pytest -q",
+    "docker:local:up": "docker compose -f deploy/local/docker-compose.yml --env-file deploy/local/.env.example up -d --build",
+    "docker:local:down": "docker compose -f deploy/local/docker-compose.yml down",
+    "docker:local:logs": "docker compose -f deploy/local/docker-compose.yml logs -f"
+  }
+}

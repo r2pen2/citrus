@@ -1,0 +1,103 @@
+@import url('../../assets/style/global.scss');
+
+.background-controller {
+    // Used to set background wave svg
+    align-items: center;
+    justify-content: center;
+    height: 93vh;
+    display: flex;
+    flex-direction: column;
+    background-image: url('../../assets/svg/waveOrange2.svg');
+    background-size: 100vw;
+    background-repeat: no-repeat;
+    background-position: bottom;
+
+    .login-text {
+        font-family: 'FredokaOne', sans-serif;
+        font-size: 36px;
+    }
+
+    .login-content {
+        // Used to set paper size
+        margin-top: 7vh;
+        transform: translate(0, -60px);
+        width: 30vw;
+        height: 70vh;
+        background-color: #fafafa;
+        border-radius: 10px;
+    }
+    
+    .login-logo-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 40px;
+        width: 100%;
+        user-select: none;
+        
+        .logo {
+            width: 256px;
+            height: auto;
+            transition: transform 0.5s ease;
+
+            &.spin {
+                transform: rotate(360deg);
+            }
+        }
+    }
+    
+    .login-next-button-container {
+        justify-content: center;
+        margin-top: 40px;
+        display: flex;
+    }
+    
+    .stepper-wrapper {
+        display: flex;
+        position: absolute;
+        bottom: 40px;
+        top: auto;
+    }
+
+    .login-input-window {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+}
+
+.phone-page-wrapper {
+    .phone-input-container {
+        justify-content: center;
+        margin-top: 30px;
+        display: flex;
+    }
+    
+    .call-me-button-container {
+        margin-top: 20px;
+    }
+}
+
+.auth-code-input-page-wrapper {
+    .auth-input-container {
+        justify-content: center;
+        margin-top: 30px;
+        display: flex;
+    }
+    .try-again-button-container {
+        margin-top: 10px;
+        justify-content: center;
+        display: flex;
+    }    
+}
+
+.login-home-wrapper {
+    width: 80%; 
+    margin-top: 80px;
+
+    .login-btn {
+        width: 100%;
+        font-weight: bold;
+        margin-bottom: 30px;
+    }
+}

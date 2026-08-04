@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "153123374119",
+    "project_id": "citrusnative",
+    "storage_bucket": "citrusnative.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:153123374119:android:bbce9f33bfe89a0df2fa02",
+        "android_client_info": {
+          "package_name": "com.CitrusFinancial.CitrusNative"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "153123374119-nj1c41ip6ahhiorq1fsms4nhtcp2uvlk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.CitrusFinancial.CitrusNative",
+            "certificate_hash": "35f819944937e70890ddb60da827ec7ca069d651"
+          }
+        },
+        {
+          "client_id": "153123374119-83abbudbfvqubbn46im8dvimmgvhip51.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuQGioWPAKWZsW0dyS4AXKHxJyBLzLsGM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "153123374119-83abbudbfvqubbn46im8dvimmgvhip51.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

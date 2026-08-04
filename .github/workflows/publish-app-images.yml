@@ -1,0 +1,189 @@
+name: Publish app images
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "packages/**"
+      - "deploy/docker/**"
+      - "deploy/compose/**"
+      - "scripts/**"
+      - ".github/workflows/publish-app-images.yml"
+      - "package.json"
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: 'Apps to build/deploy (comma-separated: api,web,native,mongo), or "all"'
+        required: false
+        default: "all"
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-citrus-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: detect changed apps
+    runs-on: ubuntu-latest
+    outputs:
+      apps_csv: ${{ steps.detect.outputs.apps_csv }}
+      build_csv: ${{ steps.detect.outputs.build_csv }}
+      has_apps: ${{ steps.detect.outputs.has_apps }}
+      has_build: ${{ steps.detect.outputs.has_build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect apps
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          INPUT_APPS: ${{ github.event.inputs.apps }}
+        run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            input="${INPUT_APPS:-all}"
+            if [ "${input}" = "all" ] || [ -z "${input}" ]; then
+              csv="$(node -e 'import("./scripts/apps.mjs").then(m=>process.stdout.write(m.PUBLISH_APPS.map(a=>a.app).join(",")))')"
+            else
+              csv="$(node -e '
+                import("./scripts/apps.mjs").then((m) => {
+                  const wanted = process.env.INPUT_APPS.split(",").map((s) => s.trim()).filter(Boolean);
+                  const known = new Set(m.PUBLISH_APPS.map((a) => a.app));
+                  for (const name of wanted) {
+                    if (!known.has(name)) { console.error("Unknown app:", name); process.exit(1); }
+                  }
+                  process.stdout.write(wanted.join(","));
+                })
+              ')"
+            fi
+          else
+            before="${BEFORE_SHA:-}"
+            if [ -z "${before}" ] || [ "${before}" = "0000000000000000000000000000000000000000" ]; then
+              csv="$(node -e 'import("./scripts/apps.mjs").then(m=>process.stdout.write(m.PUBLISH_APPS.map(a=>a.app).join(",")))')"
+            else
+              csv="$(node scripts/detect-changed-apps.mjs --base "${before}" --head "${HEAD_SHA}")"
+            fi
+          fi
+
+          build_csv="$(CSV="$csv" node -e '
+            import("./scripts/apps.mjs").then((m) => {
+              const wanted = new Set((process.env.CSV || "").split(",").filter(Boolean));
+              const build = m.PUBLISH_APPS.filter((a) => wanted.has(a.app) && a.image !== false).map((a) => a.app);
+              process.stdout.write(build.join(","));
+            })
+          ')"
+
+          echo "apps_csv=${csv}" >> "$GITHUB_OUTPUT"
+          echo "build_csv=${build_csv}" >> "$GITHUB_OUTPUT"
+          if [ -n "${csv}" ]; then echo "has_apps=true" >> "$GITHUB_OUTPUT"; else echo "has_apps=false" >> "$GITHUB_OUTPUT"; fi
+          if [ -n "${build_csv}" ]; then echo "has_build=true" >> "$GITHUB_OUTPUT"; else echo "has_build=false" >> "$GITHUB_OUTPUT"; fi
+          echo "Deploy set: ${csv:-'(none)'}"
+          echo "Build set: ${build_csv:-'(none)'}"
+
+  publish:
+    name: build & push images
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        env:
+          OWNER: ${{ github.repository_owner }}
+          SHA: ${{ github.sha }}
+          BUILD_CSV: ${{ needs.detect.outputs.build_csv }}
+          REACT_APP_API_URL: ${{ vars.REACT_APP_API_URL }}
+        run: |
+          set -euo pipefail
+          API_URL="${REACT_APP_API_URL:-https://api.citrus.joed.dev}"
+          mapfile -t entries < <(node -e '
+            import("./scripts/apps.mjs").then((m) => {
+              const wanted = new Set((process.env.BUILD_CSV || "").split(",").filter(Boolean));
+              for (const a of m.PUBLISH_APPS) {
+                if (!wanted.has(a.app) || a.image === false) continue;
+                process.stdout.write(`${a.app}|${a.dockerfile}\n`);
+              }
+            })
+          ')
+          for entry in "${entries[@]}"; do
+            IFS='|' read -r app dockerfile <<< "${entry}"
+            image="ghcr.io/${OWNER,,}/citrus-${app}"
+            echo "::group::Build ${app}"
+            extra=()
+            if [ "${app}" = "web" ] || [ "${app}" = "native" ]; then
+              extra+=(--build-arg "REACT_APP_API_URL=${API_URL}")
+              extra+=(--build-arg "EXPO_PUBLIC_API_URL=${API_URL}")
+            fi
+            docker buildx build \
+              --file "${dockerfile}" \
+              --tag "${image}:latest" \
+              --tag "${image}:${SHA}" \
+              --cache-from "type=gha,scope=citrus-${app}" \
+              --cache-to "type=gha,mode=max,scope=citrus-${app}" \
+              "${extra[@]}" \
+              --push \
+              .
+            echo "::endgroup::"
+          done
+
+  deploy:
+    name: deploy on glados
+    needs: [detect, publish]
+    if: |
+      always() &&
+      needs.detect.outputs.has_apps == 'true' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+    runs-on: [self-hosted, glados]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy compose stacks
+        env:
+          APPS_CSV: ${{ needs.detect.outputs.apps_csv }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra APPS <<< "${APPS_CSV}"
+          # Ensure internal network exists for mongo ↔ api
+          sudo docker network inspect citrus_internal >/dev/null 2>&1 || sudo docker network create citrus_internal
+
+          # Deploy mongo before api when both present
+          order=(mongo api web native)
+          for app in "${order[@]}"; do
+            echo "${APPS_CSV}" | grep -qw "${app}" || continue
+            compose_src="deploy/compose/citrus-${app}.yml"
+            dest_dir="/opt/services/apps/citrus-${app}"
+            sudo mkdir -p "${dest_dir}"
+            sudo cp "${compose_src}" "${dest_dir}/compose.yml"
+
+            case "${app}" in
+              api) export CITRUS_API_IMAGE_TAG="${SHA}" ;;
+              web) export CITRUS_WEB_IMAGE_TAG="${SHA}" ;;
+              native) export CITRUS_NATIVE_IMAGE_TAG="${SHA}" ;;
+            esac
+
+            echo "::group::Deploy citrus-${app}"
+            sudo -E docker compose -f "${dest_dir}/compose.yml" pull || true
+            sudo -E docker compose -f "${dest_dir}/compose.yml" up -d
+            echo "::endgroup::"
+          done

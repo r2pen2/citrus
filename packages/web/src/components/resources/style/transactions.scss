@@ -1,0 +1,74 @@
+@import "../../../assets/style/global.scss";
+
+.transaction-card-content {
+    height: 60px;
+
+    .side {
+        flex: 2;
+    }
+
+    .center {
+        flex: 6;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+}
+
+.transaction-card {
+    transition: all 0.5s ease;
+
+    .transcation-card-content-wrapper {
+        width: 100%;
+    }
+
+    .transaction-actions {
+        height: 75%;
+        opacity: 0;
+        width: 0%;
+        transition: all 0.5s ease;
+    }
+
+    .settle-actions {
+        width: 0%;
+        opacity: 0;
+    }
+
+    &:hover.unpaid {
+        .transcation-card-content-wrapper {
+            width: auto;
+        }
+        
+        .transaction-actions {
+            opacity: 1;
+            width: 10%;
+        }
+
+        .settle-actions {
+            transition: all 0.5s ease;
+            width: 30%;
+            opacity: 1;
+            margin-right: 10px;
+            
+            &.hidden {
+                opacity: 0;
+                width: 0%;
+            }
+        }
+    }
+}
+
+.transaction-detail-header {
+    h1 {
+        font-size: 32px;
+    }
+}
+
+.transaction-preview-fraction {
+    h2 {
+        font-size: 24px;
+    }
+}

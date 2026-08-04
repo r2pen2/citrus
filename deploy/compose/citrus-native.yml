@@ -1,0 +1,18 @@
+services:
+  citrus-native:
+    image: ghcr.io/r2pen2/citrus-native:${CITRUS_NATIVE_IMAGE_TAG:-latest}
+    container_name: citrus-native
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      traefik.enable: "true"
+      traefik.http.routers.citrus-native.rule: Host(`citrusnative.joed.dev`) || Host(`www.citrusnative.joed.dev`)
+      traefik.http.routers.citrus-native.entrypoints: web
+      traefik.http.services.citrus-native.loadbalancer.server.port: "80"
+      traefik.docker.network: proxy
+
+networks:
+  proxy:
+    external: true

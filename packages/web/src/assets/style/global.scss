@@ -1,0 +1,69 @@
+@font-face {
+    font-family: 'FredokaOne'; /*a name to be used later*/
+    src: url("../../assets/fonts//FredokaOne-Regular.ttf"); /*URL to font*/
+}
+
+// Citrus colors
+$citrus-green: #BFD679;
+$citrus-yellow: #F0E358;
+$citrus-orange: #FDB90F;
+$citrus-pink: #F4A09A;
+$citrus-red: #EA4236;
+$citrus-tan: #FDB90F33;
+$citrus-background: #FFFFFF;
+
+// Misc Style Colors
+$line-color: lightgrey;
+$text-light: #FFFFFF;
+
+// Avatar Colors
+$avatar-border-color: lightgrey;
+
+$dashboard-content-width: 50vw;
+
+.app {
+    zoom: reset;
+}
+
+body {
+    // Apparently this needs to be defined OUTSIDE of the app component in order to take effect
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+
+    // Disable scrollbar
+    &::-webkit-scrollbar {display:none;}
+}
+
+.fill-line {
+    margin-left: 10px;
+    height: 0px;
+    flex: 1;
+    border: 1px dotted $line-color;
+    
+    &.margin-right {
+        margin-right: 10px;
+    }
+
+    &.line-style-solid {
+        border: 1px solid $line-color;
+    }
+
+    &.line-style-none {
+        border: 0px dotted $line-color;
+    }
+}
+
+.spacer {
+    margin-left: 20px;
+}
+
+.hover-highlight {
+    :hover {
+        background-color: lightgrey;
+    }
+}
+
+.skeleton-round {
+    border-radius: 10px;
+}

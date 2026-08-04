@@ -1,0 +1,81 @@
+# Full local stack: Mongo + API + web + native (web export)
+# Usage:
+#   cp deploy/local/.env.example deploy/local/.env
+#   docker compose -f deploy/local/docker-compose.yml --env-file deploy/local/.env up -d --build
+
+name: citrus-local
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: citrus-local-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - citrus_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 15s
+
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/api.Dockerfile
+    image: citrus/api:local
+    container_name: citrus-local-api
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      APP_NAME: citrus-api
+      ENV: development
+      DEBUG: "true"
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB: citrus
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
+      AUTH_DISABLED: ${AUTH_DISABLED:-true}
+      DEV_AUTH_UID: ${DEV_AUTH_UID:-local-dev-user}
+      DEV_AUTH_EMAIL: ${DEV_AUTH_EMAIL:-dev@citrus.local}
+      DEV_AUTH_NAME: ${DEV_AUTH_NAME:-Local Dev}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:19006}
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/web.Dockerfile
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8000}
+    image: citrus/web:local
+    container_name: citrus-local-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+
+  native:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/native.Dockerfile
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8000}
+        EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:-http://localhost:8000}
+    image: citrus/native:local
+    container_name: citrus-local-native
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "19006:80"
+
+volumes:
+  citrus_mongo_data:

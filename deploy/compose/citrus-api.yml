@@ -1,0 +1,28 @@
+services:
+  citrus-api:
+    image: ghcr.io/r2pen2/citrus-api:${CITRUS_API_IMAGE_TAG:-latest}
+    container_name: citrus-api
+    restart: unless-stopped
+    env_file:
+      - ${CITRUS_API_ENV_FILE:-/opt/services/data/app-env/citrus-api.env}
+    environment:
+      PORT: "8000"
+      MONGODB_URI: ${CITRUS_MONGODB_URI:-mongodb://citrus-mongo:27017}
+      MONGODB_DB: ${CITRUS_MONGODB_DB:-citrus}
+    networks:
+      - proxy
+      - citrus_internal
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      traefik.enable: "true"
+      traefik.http.routers.citrus-api.rule: Host(`api.citrus.joed.dev`)
+      traefik.http.routers.citrus-api.entrypoints: web
+      traefik.http.services.citrus-api.loadbalancer.server.port: "8000"
+      traefik.docker.network: proxy
+
+networks:
+  proxy:
+    external: true
+  citrus_internal:
+    external: true
+    name: citrus_internal

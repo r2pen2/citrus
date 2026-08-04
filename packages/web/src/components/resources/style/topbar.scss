@@ -1,0 +1,33 @@
+$topbar-anchor-color: black;
+
+.topbar {
+    width: 100%;
+    top: 0;
+    bottom: auto;
+    height: 7vh;
+    align-items: center;
+    display: flex;
+    justify-content: center;
+
+    .appbar-container {
+        width: 100vw;
+    }
+
+    a {
+        text-decoration: none;
+        color: $topbar-anchor-color;
+    }
+}
+
+.topbar-logo {
+    width: 40px;
+}
+
+.topbar-logo-container {
+    display: flex;
+    justify-content: center;
+}
+
+.topbar-citrus-title {
+    flex-grow: 1;
+}
