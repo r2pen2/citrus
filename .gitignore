@@ -21,6 +21,3 @@ htmlcov/
 *.log
 deploy/local/.env
 packages/api/.venv/
-
-# push workflows after: gh auth refresh -s workflow
-#.github/workflows/
