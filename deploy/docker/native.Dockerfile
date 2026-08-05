@@ -7,12 +7,13 @@ ARG REACT_APP_API_URL=http://localhost:8000
 ARG EXPO_PUBLIC_API_URL=http://localhost:8000
 ENV REACT_APP_API_URL=${REACT_APP_API_URL} \
     EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL} \
-    CI=1
+    CI=1 \
+    NODE_OPTIONS=--openssl-legacy-provider
 WORKDIR /app
 COPY packages/native/package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY packages/native/ ./
-# Expo 47 webpack export → web-build/
+# Expo 47 webpack + Node 18 needs legacy OpenSSL provider
 RUN npx expo export:web
 
 FROM nginx:1.27-alpine AS runtime

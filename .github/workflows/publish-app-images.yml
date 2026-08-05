@@ -125,6 +125,7 @@ jobs:
               }
             })
           ')
+          fail=0
           for entry in "${entries[@]}"; do
             IFS='|' read -r app dockerfile <<< "${entry}"
             image="ghcr.io/${OWNER,,}/citrus-${app}"
@@ -134,7 +135,7 @@ jobs:
               extra+=(--build-arg "REACT_APP_API_URL=${API_URL}")
               extra+=(--build-arg "EXPO_PUBLIC_API_URL=${API_URL}")
             fi
-            docker buildx build \
+            if docker buildx build \
               --file "${dockerfile}" \
               --tag "${image}:latest" \
               --tag "${image}:${SHA}" \
@@ -142,9 +143,17 @@ jobs:
               --cache-to "type=gha,mode=max,scope=citrus-${app}" \
               "${extra[@]}" \
               --push \
-              .
+              .; then
+              echo "built=${app}" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::Build failed for ${app}"
+              fail=1
+            fi
             echo "::endgroup::"
           done
+          if [ "${fail}" -ne 0 ]; then
+            exit 1
+          fi
 
   deploy:
     name: deploy on glados
