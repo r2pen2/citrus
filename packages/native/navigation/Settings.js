@@ -52,7 +52,9 @@ export default function Settings({navigation}) {
     setListenedGroups([]);        // Wipe listened groups array
     setTransactionsData({});      // Wipe transaction data
     setListenedTransactions([]);  // Wipe listened transcations array
-    unsubscribeCurrentUser();     // Unsubscribe the current user manager from updates! (jesus christ this took me forever to figure out)
+    if (typeof unsubscribeCurrentUser === "function") {
+      unsubscribeCurrentUser();   // Native Firestore listener cleanup (web never sets this)
+    }
     setCurrentUserManager(null);  // Set the current user manager to null so that we can login again
   }
 

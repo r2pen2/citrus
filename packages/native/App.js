@@ -118,7 +118,7 @@ function App() {
         <View style={{height: '100%'}}>
           <NavigationContainer theme={navTheme}>
             <AppStack.Navigator
-              initialRouteName="loading"
+              initialRouteName="login"
               screenOptions={{
                 headerShown: false,
               }}
