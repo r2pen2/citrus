@@ -20,5 +20,5 @@ services:
 
 networks:
   citrus_internal:
+    external: true
     name: citrus_internal
-    driver: bridge
