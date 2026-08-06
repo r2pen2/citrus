@@ -73,7 +73,9 @@ sudo nano /opt/services/data/app-env/citrus-api.env
 bash ~/citrus/scripts/glados-bring-up.sh
 ```
 
-Browser auth is Firebase Google (popup) against the existing `citrus-v3` Firestore. Traefik does **not** gate apps with `sso@file`.
+Browser auth is Firebase Google (popup) against the **`citrusnative`** project (shared with native mobile). Traefik does **not** gate apps with `sso@file`.
+
+Authorized domains on that project should include `localhost`, `citrus.joed.dev`, and `citrusnative.joed.dev`.
 
 ### Hostnames (Traefik labels)
 

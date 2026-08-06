@@ -1,5 +1,5 @@
 /**
- * Web export (citrusnative.joed.dev): Firebase Google popup (same citrus-v3 project).
+ * Web export (citrusnative.joed.dev): Firebase Google popup (citrusnative project).
  * Do not import @react-native-google-signin here — it crashes without a native module.
  */
 import {

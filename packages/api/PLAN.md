@@ -13,7 +13,7 @@ One API supports **both** Citrus-V3 (web) and CitrusNative (mobile). There is no
 
 ### Auth (no Firebase on the API)
 
-**Browser (citrus.joed.dev / citrusnative.joed.dev):** joed.dev Traefik SSO (oauth2-proxy Google)
+**Browser (citrus.joed.dev / citrusnative.joed.dev):** Firebase Google Auth on project `citrusnative`
 
 1. Traefik `sso@file` gates the UI and API hosts
 2. Client calls `POST /auth/sso` with SSO cookies; Traefik injects `X-Auth-Request-Email`
@@ -23,7 +23,7 @@ One API supports **both** Citrus-V3 (web) and CitrusNative (mobile). There is no
 **Mobile (optional):** `POST /auth/google` with a Google ID token (`GOOGLE_CLIENT_IDS`) — user `_id` = Google `sub`.
 
 Mongo is the system of record — no Firebase Auth/Firestore on the backend.
-Legacy Firebase projects (`citrus-v3` / `citrusnative`) are migration sources only.
+Shared Firebase project for UIs: **`citrusnative`** (Auth + Firestore). `citrus-v3` is unused / not migrated.
 
 ---
 

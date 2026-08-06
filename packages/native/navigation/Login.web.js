@@ -1,5 +1,5 @@
 /**
- * Expo web export login — Firebase Google popup (citrus-v3), same uids as packages/web.
+ * Expo web export login — Firebase Google popup (citrusnative), same project as packages/web.
  */
 import { useContext, useEffect, useState } from "react";
 import { ActivityIndicator, Image, Text, View } from "react-native";

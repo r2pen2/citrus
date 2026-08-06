@@ -1,6 +1,6 @@
 /**
- * Firebase JS SDK for Expo web export (RN Firebase has no web Auth/Firestore listeners).
- * Same project as packages/web (citrus-v3) so Google accounts map to existing Firestore uids.
+ * Firebase JS SDK for Expo web export.
+ * Same citrusnative project as packages/web and native mobile.
  */
 import { initializeApp, getApps } from "firebase/app";
 import {
@@ -12,13 +12,13 @@ import {
 } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAMlDxLg0iubO5aU3JWqLuFjiAZrfPfBDE",
-  authDomain: "citrus-v3.firebaseapp.com",
-  projectId: "citrus-v3",
-  storageBucket: "citrus-v3.appspot.com",
-  messagingSenderId: "665676253888",
-  appId: "1:665676253888:web:e9d768e2bb4d8953dc3b25",
-  measurementId: "G-YEWGGQ0B9J",
+  apiKey: "AIzaSyBhWENoSrQRMVxNagkzhECRaiozlbeevgc",
+  authDomain: "citrusnative.firebaseapp.com",
+  projectId: "citrusnative",
+  storageBucket: "citrusnative.firebasestorage.app",
+  messagingSenderId: "153123374119",
+  appId: "1:153123374119:web:bb6c2e7b10914698f2fa02",
+  measurementId: "G-9PTVYPPJHC",
 };
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
