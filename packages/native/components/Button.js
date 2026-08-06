@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useContext, } from 'react';
 import { Keyboard, Image, Pressable, Text, View, } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker"
-import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
 
 // context Imports
 import { DarkContext, NewTransactionContext } from '../Context';
@@ -224,10 +223,12 @@ export function StyledCheckbox(props) {
 }
 
 /**
- * Google Sign-In button for Login Screen
+ * Google Sign-In button for Login Screen.
+ * Plain Pressable — do not use GoogleSigninButton (crashes on Expo web).
  * @param {Function} onClick function to be called on click 
  */
 export function GoogleButton({onClick}) {
+  const { dark } = useContext(DarkContext);
 
   return (
     <View 
@@ -239,7 +240,8 @@ export function GoogleButton({onClick}) {
         marginTop: 10,
         marginBottom:  0,
         borderRadius: 10,
-        elevation: buttonStyles.buttonElevation
+        elevation: buttonStyles.buttonElevation,
+        backgroundColor: dark ? darkTheme.cardFill : lightTheme.cardFill,
       }}
     >
       <Pressable
@@ -254,7 +256,9 @@ export function GoogleButton({onClick}) {
           justifyContent: "center",
         }}
       >
-        <GoogleSigninButton />
+        <Text style={{ color: dark ? darkTheme.textPrimary : lightTheme.textPrimary, fontWeight: "600" }}>
+          Continue with Google
+        </Text>
       </Pressable>
     </View>
   );
