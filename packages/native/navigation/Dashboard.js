@@ -85,6 +85,10 @@ export default function Dashboard({navigation}) {
    * @async
    */
   async function subscribeToSelf() {
+    // Web SSO stub managers have no Firestore docRef (RN Firebase is native-only).
+    if (!currentUserManager?.docRef?.onSnapshot) {
+      return;
+    }
     // If we're already listening to a currentUserManager, stop. We'll replace the listener here.
     if (unsubscribeCurrentUser) {
       await unsubscribeCurrentUser();
@@ -139,6 +143,7 @@ export default function Dashboard({navigation}) {
         }
         // Get a userManager for this new person
         const relationUserManager = DBManager.getUserManager(userId);
+        if (!relationUserManager?.docRef?.onSnapshot) { continue; }
         relationUserManager.docRef.onSnapshot((snap) => {
           // And set up a listener for changes
           if (snap.data()) {                
@@ -179,6 +184,7 @@ export default function Dashboard({navigation}) {
         }
         // Get a groupManager
         const groupManager = DBManager.getGroupManager(groupId);
+        if (!groupManager?.docRef?.onSnapshot) { continue; }
         groupManager.docRef.onSnapshot((snap) => {
           // On document update, if there's data, save it to the GroupsContext
           if (snap.data()) {                
@@ -218,6 +224,7 @@ export default function Dashboard({navigation}) {
       }
       // Get a transaction manager
       const transactionManager = DBManager.getTransactionManager(transactionId);
+      if (!transactionManager?.docRef?.onSnapshot) { continue; }
       transactionManager.docRef.onSnapshot((snap) => {
         // Add a listener that updates transcation data with change data
         if (snap.data()) {

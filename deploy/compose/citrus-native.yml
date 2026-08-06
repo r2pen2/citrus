@@ -10,9 +10,18 @@ services:
       traefik.enable: "true"
       traefik.docker.network: proxy
       traefik.http.services.citrus-native.loadbalancer.server.port: "80"
+
+      # Static / PWA assets — no SSO (manifest fetch must not 302 to auth.joed.dev)
+      traefik.http.routers.citrus-native-public.rule: (Host(`citrusnative.joed.dev`) || Host(`www.citrusnative.joed.dev`)) && (PathPrefix(`/static`) || PathPrefix(`/pwa`) || Path(`/manifest.json`) || Path(`/asset-manifest.json`) || Path(`/favicon.ico`) || Path(`/favicon-16.png`) || Path(`/favicon-32.png`) || Path(`/robots.txt`) || Path(`/serve.json`))
+      traefik.http.routers.citrus-native-public.entrypoints: web
+      traefik.http.routers.citrus-native-public.priority: "100"
+      traefik.http.routers.citrus-native-public.service: citrus-native
+
       traefik.http.routers.citrus-native.rule: Host(`citrusnative.joed.dev`) || Host(`www.citrusnative.joed.dev`)
       traefik.http.routers.citrus-native.entrypoints: web
+      traefik.http.routers.citrus-native.priority: "1"
       traefik.http.routers.citrus-native.middlewares: sso@file
+      traefik.http.routers.citrus-native.service: citrus-native
 
 networks:
   proxy:
