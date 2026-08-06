@@ -31,7 +31,8 @@ concurrency:
 jobs:
   detect:
     name: detect changed apps
-    runs-on: ubuntu-latest
+    # Prefer self-hosted so publish still works when GitHub-hosted runners are unavailable.
+    runs-on: [self-hosted, glados]
     outputs:
       apps_csv: ${{ steps.detect.outputs.apps_csv }}
       build_csv: ${{ steps.detect.outputs.build_csv }}
@@ -95,17 +96,17 @@ jobs:
     name: build & push images
     needs: detect
     if: needs.detect.outputs.has_build == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, glados]
     steps:
       - uses: actions/checkout@v4
 
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GHCR
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "${GHCR_TOKEN}" | sudo docker login ghcr.io -u "${GHCR_USER}" --password-stdin
 
       - name: Build and push
         env:
@@ -126,24 +127,24 @@ jobs:
             })
           ')
           fail=0
+          owner="$(echo "${OWNER}" | tr '[:upper:]' '[:lower:]')"
           for entry in "${entries[@]}"; do
             IFS='|' read -r app dockerfile <<< "${entry}"
-            image="ghcr.io/${OWNER,,}/citrus-${app}"
+            image="ghcr.io/${owner}/citrus-${app}"
             echo "::group::Build ${app}"
             extra=()
             if [ "${app}" = "web" ] || [ "${app}" = "native" ]; then
               extra+=(--build-arg "REACT_APP_API_URL=${API_URL}")
               extra+=(--build-arg "EXPO_PUBLIC_API_URL=${API_URL}")
             fi
-            if docker buildx build \
+            if sudo docker build \
               --file "${dockerfile}" \
               --tag "${image}:latest" \
               --tag "${image}:${SHA}" \
-              --cache-from "type=gha,scope=citrus-${app}" \
-              --cache-to "type=gha,mode=max,scope=citrus-${app}" \
               "${extra[@]}" \
-              --push \
-              .; then
+              . \
+              && sudo docker push "${image}:latest" \
+              && sudo docker push "${image}:${SHA}"; then
               echo "built=${app}" >> "$GITHUB_OUTPUT"
             else
               echo "::error::Build failed for ${app}"
