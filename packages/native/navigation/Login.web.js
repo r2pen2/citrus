@@ -52,7 +52,7 @@ export default function Login({ navigation }) {
         if (cancelled) return;
         if (user) {
           setCurrentUserManager(makeWebUserManager(user));
-          navigation.navigate("dashboard");
+          navigation.reset({ index: 0, routes: [{ name: "dashboard" }] });
           return;
         }
       } catch (err) {
@@ -73,7 +73,7 @@ export default function Login({ navigation }) {
     try {
       const user = await signInWithGoogle();
       setCurrentUserManager(makeWebUserManager(user));
-      navigation.navigate("dashboard");
+      navigation.reset({ index: 0, routes: [{ name: "dashboard" }] });
     } catch (err) {
       console.error("Google sign-in failed:", err);
       if (err?.code !== "auth/popup-closed-by-user" && err?.code !== "auth/cancelled-popup-request") {

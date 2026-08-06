@@ -1,26 +1,117 @@
 /**
- * Expo web Dashboard — no Firestore listeners (@react-native-firebase has no onSnapshot on web).
- * Shows Firebase Google session + settings/sign-out. Full ledger UI stays on native / citrus.joed.dev.
+ * Expo web Dashboard — self-contained.
+ * Do not import Settings / Avatar / dbManager: those pull @react-native-firebase/firestore
+ * and crash the web bundle after auth restore navigates here.
  */
-import { useContext } from "react";
-import { Image, Text, View } from "react-native";
-import { createStackNavigator } from "@react-navigation/stack";
+import { useContext, useState } from "react";
+import { Image, Pressable, Text, View } from "react-native";
 
-import Settings from "./Settings";
 import { CenteredTitle } from "../components/Text";
-import { StyledButton } from "../components/Button";
 import { PageWrapper } from "../components/Wrapper";
 import { CurrentUserContext, DarkContext } from "../Context";
-import { darkTheme, lightTheme } from "../assets/styles";
+import { darkTheme, lightTheme, buttonStyles, globalColors } from "../assets/styles";
+import { googleAuth } from "../api/auth";
 
-const Stack = createStackNavigator();
-
-function WebHome({ navigation }) {
-  const { currentUserManager } = useContext(CurrentUserContext);
+function WebButton({ text, onClick, color }) {
   const { dark } = useContext(DarkContext);
+  const border =
+    color === "red"
+      ? globalColors.red
+      : dark
+        ? darkTheme.buttonBorder
+        : lightTheme.buttonBorder;
+  const label =
+    color === "red"
+      ? globalColors.red
+      : dark
+        ? darkTheme.textPrimary
+        : lightTheme.textPrimary;
+
+  return (
+    <View
+      style={{
+        width: buttonStyles.buttonWidth,
+        height: buttonStyles.buttonHeight,
+        marginTop: 10,
+        borderRadius: 10,
+        backgroundColor: dark ? darkTheme.buttonFill : lightTheme.buttonFill,
+      }}
+    >
+      <Pressable
+        onPress={onClick}
+        style={{
+          height: "100%",
+          width: "100%",
+          borderRadius: 10,
+          borderWidth: buttonStyles.buttonBorderWidth,
+          borderColor: border,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ color: label, fontSize: 20 }}>{text}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+export default function Dashboard({ navigation }) {
+  const { currentUserManager, setCurrentUserManager } = useContext(CurrentUserContext);
+  const { dark, setDark } = useContext(DarkContext);
+  const [showSettings, setShowSettings] = useState(false);
+
   const pd = currentUserManager?.data?.personalData || {};
   const textColor = dark ? darkTheme.textPrimary : lightTheme.textPrimary;
   const secondary = dark ? darkTheme.textSecondary : lightTheme.textSecondary;
+
+  async function handleLogout() {
+    try {
+      await googleAuth.signOut();
+    } catch (err) {
+      console.error("Sign-out failed:", err);
+    }
+    setCurrentUserManager(null);
+    navigation.reset({ index: 0, routes: [{ name: "login" }] });
+  }
+
+  if (showSettings) {
+    return (
+      <PageWrapper justifyContent="center">
+        <View
+          style={{
+            width: "100%",
+            maxWidth: 420,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingBottom: 40,
+          }}
+        >
+          <Image
+            source={
+              pd.pfpUrl
+                ? { uri: pd.pfpUrl }
+                : require("../assets/images/LogoShadow.png")
+            }
+            style={{ width: 160, height: 160, borderRadius: 80, marginBottom: 16 }}
+          />
+          <CenteredTitle text={pd.displayName || "Citrus"} fontSize={24} />
+          <CenteredTitle
+            text={`Email: ${pd.email || "?"}`}
+            alignment="left"
+            fontSize={14}
+          />
+          <View style={{ marginTop: 12 }}>
+            <WebButton
+              text={dark ? "Light mode" : "Dark mode"}
+              onClick={() => setDark(!dark)}
+            />
+            <WebButton text="Back" onClick={() => setShowSettings(false)} />
+            <WebButton text="Logout" color="red" onClick={handleLogout} />
+          </View>
+        </View>
+      </PageWrapper>
+    );
+  }
 
   return (
     <PageWrapper>
@@ -58,27 +149,10 @@ function WebHome({ navigation }) {
           Firestore listeners, which are not available in this web export yet —
           use citrus.joed.dev for the full web app.
         </Text>
-        <View style={{ marginTop: 28, width: "100%", maxWidth: 320 }}>
-          <StyledButton
-            text="Settings / Sign out"
-            onClick={() => navigation.navigate("settings")}
-          />
+        <View style={{ marginTop: 28, alignItems: "center" }}>
+          <WebButton text="Settings / Sign out" onClick={() => setShowSettings(true)} />
         </View>
       </View>
     </PageWrapper>
-  );
-}
-
-export default function Dashboard() {
-  return (
-    <View style={{ height: "100%" }}>
-      <Stack.Navigator
-        initialRouteName="main"
-        screenOptions={{ headerShown: false }}
-      >
-        <Stack.Screen name="main" component={WebHome} />
-        <Stack.Screen name="settings" component={Settings} />
-      </Stack.Navigator>
-    </View>
   );
 }
