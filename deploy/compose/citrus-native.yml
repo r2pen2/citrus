@@ -12,13 +12,7 @@ services:
       traefik.http.services.citrus-native.loadbalancer.server.port: "80"
 
       # Static assets — no SSO
-      traefik.http.routers.citrus-native-public.rule: >
-        (Host(`citrusnative.joed.dev`) || Host(`www.citrusnative.joed.dev`)) &&
-        (PathPrefix(`/static`) ||
-         PathPrefix(`/_expo`) ||
-         Path(`/manifest.json`) ||
-         Path(`/favicon.ico`) ||
-         Path(`/robots.txt`))
+      traefik.http.routers.citrus-native-public.rule: (Host(`citrusnative.joed.dev`) || Host(`www.citrusnative.joed.dev`)) && (PathPrefix(`/static`) || PathPrefix(`/_expo`) || Path(`/manifest.json`) || Path(`/favicon.ico`) || Path(`/robots.txt`))
       traefik.http.routers.citrus-native-public.entrypoints: web
       traefik.http.routers.citrus-native-public.priority: "100"
       traefik.http.routers.citrus-native-public.service: citrus-native
