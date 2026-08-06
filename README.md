@@ -4,7 +4,7 @@ Monorepo for Citrus Financial — shared API + both UIs, deployed WL-Universe st
 
 | Package | Role | Public host (prod) |
 |---------|------|--------------------|
-| `packages/api` | FastAPI + Mongo | `api.citrus.joed.dev` (internal / Traefik) |
+| `packages/api` | FastAPI + Mongo | `citrus-api.joed.dev` |
 | `packages/web` | Citrus-V3 React (CRA) | **https://citrus.joed.dev** |
 | `packages/native` | CitrusNative (Expo; web export for now) | **https://citrusnative.joed.dev** |
 
@@ -70,7 +70,7 @@ Same pattern as [WL-Universe](https://github.com/r2pen2/WL-Universe):
 4. Cloudflare Tunnel / Traefik host rules:
    - `citrus.joed.dev` → web
    - `citrusnative.joed.dev` → native
-   - `api.citrus.joed.dev` → api
+   - `citrus-api.joed.dev` → api
 5. Secrets live in `/opt/services/data/app-env/` (never in git)
 6. Mongo data: `/opt/services/data/app-assets/citrus-mongo/`
 

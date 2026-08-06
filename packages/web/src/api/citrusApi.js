@@ -2,7 +2,10 @@ const DEFAULT_API_URL = "https://citrus-api.joed.dev";
 
 export function getApiBaseUrl() {
   const fromEnv = (process.env.REACT_APP_API_URL || "").trim();
-  return (fromEnv || DEFAULT_API_URL).replace(/\/$/, "");
+  let base = (fromEnv || DEFAULT_API_URL).replace(/\/$/, "");
+  // api.citrus.joed.dev often has no public DNS; normalize to the working host.
+  base = base.replace("://api.citrus.joed.dev", "://citrus-api.joed.dev");
+  return base;
 }
 
 /**

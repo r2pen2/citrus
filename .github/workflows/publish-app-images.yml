@@ -116,7 +116,8 @@ jobs:
           REACT_APP_API_URL: ${{ vars.REACT_APP_API_URL }}
         run: |
           set -euo pipefail
-          API_URL="${REACT_APP_API_URL:-https://api.citrus.joed.dev}"
+          # Prefer citrus-api.joed.dev (first-level label; api.citrus.joed.dev may have no DNS)
+          API_URL="${REACT_APP_API_URL:-https://citrus-api.joed.dev}"
           mapfile -t entries < <(node -e '
             import("./scripts/apps.mjs").then((m) => {
               const wanted = new Set((process.env.BUILD_CSV || "").split(",").filter(Boolean));

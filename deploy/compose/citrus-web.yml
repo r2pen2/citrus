@@ -8,11 +8,29 @@ services:
     labels:
       com.centurylinklabs.watchtower.enable: "true"
       traefik.enable: "true"
+      traefik.docker.network: proxy
+      traefik.http.services.citrus-web.loadbalancer.server.port: "80"
+
+      # Static CRA assets — no SSO (avoids CORS when <link rel=manifest> follows a 302)
+      traefik.http.routers.citrus-web-public.rule: >
+        (Host(`citrus.joed.dev`) || Host(`www.citrus.joed.dev`)) &&
+        (PathPrefix(`/static`) ||
+         Path(`/manifest.json`) ||
+         Path(`/asset-manifest.json`) ||
+         Path(`/favicon.ico`) ||
+         Path(`/robots.txt`) ||
+         Path(`/logo192.png`) ||
+         Path(`/logo512.png`))
+      traefik.http.routers.citrus-web-public.entrypoints: web
+      traefik.http.routers.citrus-web-public.priority: "100"
+      traefik.http.routers.citrus-web-public.service: citrus-web
+
+      # App shell behind joed.dev Google SSO
       traefik.http.routers.citrus-web.rule: Host(`citrus.joed.dev`) || Host(`www.citrus.joed.dev`)
       traefik.http.routers.citrus-web.entrypoints: web
+      traefik.http.routers.citrus-web.priority: "1"
       traefik.http.routers.citrus-web.middlewares: sso@file
-      traefik.http.services.citrus-web.loadbalancer.server.port: "80"
-      traefik.docker.network: proxy
+      traefik.http.routers.citrus-web.service: citrus-web
 
 networks:
   proxy:
