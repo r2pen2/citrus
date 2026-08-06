@@ -21,8 +21,7 @@ import InviteHandler from "./components/inviteHandler/InviteHandler";
 
 // API imports
 import { SessionManager } from "./api/sessionManager";
-import { auth } from "./api/firebase";
-import { finishGoogleSignInIfNeeded, toSessionUser } from "./api/authBootstrap";
+import { finishSsoSignInIfNeeded } from "./api/authBootstrap";
 
 export const UsersContext = React.createContext();
 export const GroupsContext = React.createContext();
@@ -32,35 +31,23 @@ const skipHomePage = true;
 
 function App() {
 
-  // Restore an existing Firebase session (and finish any legacy redirect result).
-  // Keep localStorage in sync with Firebase Auth after that.
+  // If a Citrus JWT session already exists (or joed.dev SSO cookie is present),
+  // finish login without Firebase.
   useEffect(() => {
     let cancelled = false;
 
-    // Only auto-complete when a session may already exist — popup sign-in
-    // completes itself from LoginHome.
-    if (SessionManager.getCurrentUser() || auth.currentUser) {
-      finishGoogleSignInIfNeeded().catch((error) => {
+    if (SessionManager.getCurrentUser() && localStorage.getItem("citrus:accessToken")) {
+      finishSsoSignInIfNeeded().catch((error) => {
         if (!cancelled) {
           console.error("Auth bootstrap failed:", error);
         }
       });
     }
 
-    const unsubscribe = auth.onAuthStateChanged((authUser) => {
-      if (authUser) {
-        SessionManager.setCurrentUser(toSessionUser(authUser));
-      } else if (SessionManager.getCurrentUser()) {
-        SessionManager.clearLS();
-      }
-    });
-
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
-
   const [usersData, setUsersData] = useState({});
   const [transactionsData, setTransactionsData] = useState({});
   const [groupsData, setGroupsData] = useState({});

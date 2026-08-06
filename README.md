@@ -8,7 +8,7 @@ Monorepo for Citrus Financial — shared API + both UIs, deployed WL-Universe st
 | `packages/web` | Citrus-V3 React (CRA) | **https://citrus.joed.dev** |
 | `packages/native` | CitrusNative (Expo; web export for now) | **https://citrusnative.joed.dev** |
 
-Auth: Google SSO → Citrus JWT (see `packages/api`). Mongo is the system of record.
+Auth: joed.dev Google SSO (Traefik/oauth2-proxy) → `POST /auth/sso` → Citrus JWT. Mongo is the system of record.
 
 ## Layout
 

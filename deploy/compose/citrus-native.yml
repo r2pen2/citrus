@@ -10,6 +10,7 @@ services:
       traefik.enable: "true"
       traefik.http.routers.citrus-native.rule: Host(`citrusnative.joed.dev`) || Host(`www.citrusnative.joed.dev`)
       traefik.http.routers.citrus-native.entrypoints: web
+      traefik.http.routers.citrus-native.middlewares: sso@file
       traefik.http.services.citrus-native.loadbalancer.server.port: "80"
       traefik.docker.network: proxy
 

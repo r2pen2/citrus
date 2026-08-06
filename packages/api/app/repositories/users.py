@@ -54,7 +54,7 @@ def build_new_user(
     picture: str | None,
     phone_number: str | None,
 ) -> UserDocument:
-    """`uid` must be the Google `sub` (stable across web + native clients)."""
+    """`uid` is Google `sub` (ID-token path) or normalized email (joed.dev SSO)."""
     now = _utcnow()
     return UserDocument(
         id=uid,

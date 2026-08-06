@@ -13,14 +13,16 @@ One API supports **both** Citrus-V3 (web) and CitrusNative (mobile). There is no
 
 ### Auth (no Firebase on the API)
 
-Shared Google SSO for web + native:
+**Browser (citrus.joed.dev / citrusnative.joed.dev):** joed.dev Traefik SSO (oauth2-proxy Google)
 
-1. Client obtains a **Google ID token** (GIS / `@react-native-google-signin`)
-2. `POST /auth/google` `{ "idToken": "..." }` — API verifies against `GOOGLE_CLIENT_IDS`
-3. User `_id` = Google `sub` (same account → same user on both UIs)
-4. API returns **Citrus JWT**; clients send `Authorization: Bearer <accessToken>`
-5. Mongo is the system of record — no Firebase Auth/Firestore on the backend
+1. Traefik `sso@file` gates the UI and API hosts
+2. Client calls `POST /auth/sso` with SSO cookies; Traefik injects `X-Auth-Request-Email`
+3. User `_id` = normalized email; API returns **Citrus JWT**
+4. Clients send `Authorization: Bearer <accessToken>`
 
+**Mobile (optional):** `POST /auth/google` with a Google ID token (`GOOGLE_CLIENT_IDS`) — user `_id` = Google `sub`.
+
+Mongo is the system of record — no Firebase Auth/Firestore on the backend.
 Legacy Firebase projects (`citrus-v3` / `citrusnative`) are migration sources only.
 
 ---

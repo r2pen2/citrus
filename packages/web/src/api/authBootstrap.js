@@ -1,157 +1,99 @@
-import { getRedirectResult } from "firebase/auth";
-import { auth } from "./firebase";
-import { DBManager } from "./db/dbManager";
 import { SessionManager } from "./sessionManager";
 import { RouteManager } from "./routeManager";
+import { clearTokensAndSsoSignOut, exchangeSsoSession } from "./citrusApi";
 
 /**
- * Plain object safe for localStorage (Firebase User has methods / toJSON quirks).
+ * Plain session object for localStorage (matches prior Firebase shape).
  */
-export function toSessionUser(user) {
+export function toSessionUserFromApi(user) {
   if (!user) {
     return null;
   }
+  const pd = user.personalData || {};
   return {
-    uid: user.uid,
-    email: user.email ?? null,
-    displayName: user.displayName ?? null,
-    photoURL: user.photoURL ?? null,
-    emailVerified: !!user.emailVerified,
-    phoneNumber: user.phoneNumber ?? null,
+    uid: user.id,
+    email: pd.email ?? null,
+    displayName: pd.displayName ?? null,
+    photoURL: pd.pfpUrl ?? null,
+    emailVerified: !!(user.metadata && user.metadata.emailVerified),
+    phoneNumber: pd.phoneNumber ?? null,
   };
 }
 
-// getRedirectResult can only be read once; React StrictMode remounts would otherwise lose it.
-let redirectUserPromise = null;
 let completeSignInPromise = null;
 let finishSignInPromise = null;
 
-/**
- * Resolve once Firebase has restored (or rejected) the persisted/redirect session.
- */
-function waitForAuthUser() {
-  if (auth.currentUser) {
-    return Promise.resolve(auth.currentUser);
+function persistAuthResponse(body) {
+  if (!body?.accessToken || !body?.user) {
+    throw new Error("SSO login response missing accessToken or user.");
   }
-  return new Promise((resolve) => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      unsubscribe();
-      resolve(user);
-    });
-  });
-}
-
-export function getGoogleRedirectResult() {
-  if (!redirectUserPromise) {
-    redirectUserPromise = getRedirectResult(auth)
-      .then((result) => (result ? result.user : null))
-      .catch((error) => {
-        redirectUserPromise = null;
-        throw error;
-      });
+  localStorage.setItem("citrus:accessToken", body.accessToken);
+  if (body.expiresIn) {
+    localStorage.setItem(
+      "citrus:accessTokenExpiresAt",
+      String(Date.now() + body.expiresIn * 1000)
+    );
   }
-  return redirectUserPromise;
+  SessionManager.setCurrentUser(toSessionUserFromApi(body.user));
 }
 
 /**
- * Upsert the signed-in user's Firestore profile.
- * Permission errors are logged but do not block entering the app.
+ * Persist API SSO session and go to dashboard.
  */
-async function upsertUserProfile(user) {
-  // Ensure the Auth ID token is attached before the first Firestore call.
-  // Without this, getDoc/setDoc can fail with "Missing or insufficient permissions"
-  // immediately after signInWithPopup.
-  await user.getIdToken();
-
-  const userManager = DBManager.getUserManager(user.uid);
-  userManager.setLastLoginAt(new Date());
-  userManager.setEmailVerified(!!user.emailVerified);
-
-  const documentExists = await userManager.documentExists();
-  if (!documentExists) {
-    userManager.setCreatedAt(new Date());
-    userManager.setDisplayName(user.displayName);
-    userManager.setEmail(user.email);
-    userManager.setPfpUrl(user.photoURL ? user.photoURL : "https://robohash.org/" + user.uid);
-    userManager.setPhoneNumber(null);
-  }
-
-  await userManager.push();
-}
-
-/**
- * Persist session, upsert Firestore user doc, go to dashboard.
- * Deduped so StrictMode double-mount cannot run this twice.
- */
-export async function completeGoogleSignIn(user) {
-  if (!user?.uid) {
-    throw new Error("Signed-in user is missing a uid.");
-  }
-
+export async function completeSsoSignIn(authResponse) {
   if (!completeSignInPromise) {
     completeSignInPromise = (async () => {
-      SessionManager.setCurrentUser(toSessionUser(user));
-
-      try {
-        await upsertUserProfile(user);
-      } catch (error) {
-        // Auth succeeded — don't trap the user on login if Firestore rules are locked.
-        console.error("Failed to sync user profile to Firestore:", error);
-        if (error?.code === "permission-denied") {
-          console.error(
-            "Firestore denied the users/{uid} read/write. Deploy firestore.rules " +
-              "(or update rules in Firebase Console) so signed-in users can access their doc."
-          );
-        }
-      }
+      persistAuthResponse(authResponse);
     })().catch((error) => {
       completeSignInPromise = null;
       throw error;
     });
   }
-
   await completeSignInPromise;
-  // Always navigate after success — module-level promise reuse (StrictMode/HMR)
-  // must not skip the redirect on later callers.
   RouteManager.redirect("/dashboard");
 }
 
 /**
- * After Google redirect (or if auth already restored), finish login if needed.
- * Always upserts the Firestore profile — do not skip just because localStorage
- * already has a uid (onAuthStateChanged can write session before the DB doc exists).
- * @returns {Promise<boolean>} true if a sign-in completion was started
+ * Call POST /auth/sso (browser already has joed.dev SSO cookie via Traefik).
  */
-export async function finishGoogleSignInIfNeeded() {
+export async function signInWithJoedSso() {
+  const body = await exchangeSsoSession();
+  await completeSsoSignIn(body);
+  return body;
+}
+
+/**
+ * If we already have a Citrus session, stay put; otherwise try SSO exchange.
+ * @returns {Promise<boolean>} true if sign-in completed / redirected
+ */
+export async function finishSsoSignInIfNeeded() {
   if (!finishSignInPromise) {
     finishSignInPromise = (async () => {
-      let user = null;
+      if (SessionManager.getCurrentUser() && localStorage.getItem("citrus:accessToken")) {
+        RouteManager.redirect("/dashboard");
+        return true;
+      }
       try {
-        user = await getGoogleRedirectResult();
+        await signInWithJoedSso();
+        return true;
       } catch (error) {
-        // Fall through to persisted auth; surface redirect errors to caller if neither works.
-        console.error("getRedirectResult failed:", error);
-        const persisted = await waitForAuthUser();
-        if (!persisted) {
-          throw error;
-        }
-        user = persisted;
-      }
-
-      if (!user) {
-        user = await waitForAuthUser();
-      }
-      if (!user) {
+        // Not SSO'd yet or API unreachable — show login button.
+        console.error("SSO session exchange failed:", error);
         return false;
       }
-
-      await completeGoogleSignIn(user);
-      return true;
     })().catch((error) => {
       finishSignInPromise = null;
       throw error;
     });
   }
-
   return finishSignInPromise;
 }
+
+export function ssoSignOutRedirect() {
+  SessionManager.clearLS();
+  clearTokensAndSsoSignOut();
+}
+
+// Back-compat aliases used by older imports during the Firebase → SSO switch.
+export const finishGoogleSignInIfNeeded = finishSsoSignInIfNeeded;
+export const completeGoogleSignIn = completeSsoSignIn;

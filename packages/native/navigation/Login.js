@@ -13,27 +13,24 @@ import { CurrentUserContext } from "../Context";
 
 // API Imports
 import { DBManager } from "../api/dbManager";
-import { googleAuth } from "../api/auth";
+import { googleAuth, isWebSso, signInWithJoedSso } from "../api/auth";
 
 /**
  * Component for handing user sign in. User is automatically taken to dashboard if they're already signed in.
+ * Web export uses joed.dev Traefik SSO → POST /auth/sso.
+ * Native mobile keeps Google Sign-In + Firebase (legacy).
  * @param {ReactNavigation} navigation navigation object from main app shell
  */
 export default function Login({navigation}) {
 
   // Get contexts
   const { currentUserManager, setCurrentUserManager } = useContext(CurrentUserContext);
-  const [ showSpinner, setShowSpinner ] = useState(true);   // Whether or not we're showing the little spinner icon (mutually exclusive with Google button)
+  const [ showSpinner, setShowSpinner ] = useState(true);
   
-  // Check if the user already has an active authentication session on component mount
   useEffect(() => { checkSignIn(); }, [])
 
-  // When the currentUserManager changes, show the spinner if we're logged in
   useEffect(flashSpinner, [currentUserManager]);
 
-  /**
-   * Show the ActivityIndicator for 500ms if there is a currentUserManager
-   */
   function flashSpinner() {
     setShowSpinner(!currentUserManager);
     setTimeout(() => { 
@@ -41,61 +38,93 @@ export default function Login({navigation}) {
     }, 500);
   }
 
-  /**
-   * Query Google Authentication Client to decide if the user is signed in or not.
-   * If they are signed in, take them to the dashboard.
-   * @async
-   */
   async function checkSignIn() {
+    if (isWebSso()) {
+      setShowSpinner(true);
+      try {
+        await handleWebSso();
+      } catch (error) {
+        console.error("SSO auto sign-in failed:", error);
+        setShowSpinner(false);
+      }
+      return;
+    }
+
     const signedIn = await googleAuth.isSignedIn();
     setShowSpinner(false);
     if (signedIn) {
       handleGoogleClick();
     }
   }
-  
+
   /**
-   * Contact Google Authentication Client to sign in the user.
-   * If the user has an account, fetch their document and set the CurrentUserContext.
-   * If the user doesn't have an account, create their document and set CurrentUserContext.
-   * Redirect the user to dashboard after sign-in success.
-   * @async
+   * joed.dev SSO (web export): exchange proxy identity for Citrus user session.
    */
+  async function handleWebSso() {
+    setShowSpinner(true);
+    const body = await signInWithJoedSso();
+    const user = body.user;
+    const pd = user.personalData || {};
+    const uid = user.id;
+
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("citrus:accessToken", body.accessToken);
+    }
+
+    const userManager = DBManager.getUserManager(uid);
+    const userAlreadyExists = await userManager.documentExists();
+    if (userAlreadyExists) {
+      await userManager.fetchData();
+      setCurrentUserManager(userManager);
+      navigation.navigate("dashboard");
+      return;
+    }
+
+    userManager.setCreatedAt(new Date());
+    userManager.setDisplayName(pd.displayName || uid);
+    userManager.setEmail(pd.email || uid);
+    userManager.setPfpUrl(pd.pfpUrl || `https://robohash.org/${uid}`);
+    await userManager.push();
+    setCurrentUserManager(userManager);
+    navigation.navigate("dashboard");
+  }
+  
   async function handleGoogleClick() {
-      // Check if your device supports Google Play (I'm not actually using this)
+    if (isWebSso()) {
+      try {
+        await handleWebSso();
+      } catch (error) {
+        console.error("SSO sign-in failed:", error);
+        setShowSpinner(false);
+      }
+      return;
+    }
+
       let hasPlay = await googleAuth.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      // Get the users GoogleAuth ID token
+      void hasPlay;
       const { idToken } = await googleAuth.signIn();
-      // Create a Google credential with the token
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
 
-      // Sign-in the user with the credential
       auth().signInWithCredential(googleCredential).then(async (userCredentail) => {
-        // Show the spinner while we fetch the user's data
         setShowSpinner(true);
-        // Get a userManager for this user. Authentication Usercredentials have their ID stored in the user object.
         const userManager = DBManager.getUserManager(userCredentail.user.uid);
-        // Check if we've seen this user before
         const userAlreadyExists = await userManager.documentExists();
         if (userAlreadyExists) {
-          // We know this person! Get their data, set context, and go to dashboard.
           await userManager.fetchData();
           setCurrentUserManager(userManager);
           navigation.navigate("dashboard");
         } else {
-          // This is a new person! Create their document, push it to the databse, and bring them to the dashboard.
           userManager.setCreatedAt(new Date());
           userManager.setDisplayName(userCredentail.user.displayName);
           userManager.setEmail(userCredentail.user.email);
           userManager.setPfpUrl(userCredentail.user.photoURL);
-          await userManager.push(); // We might not actually have to await this but I don't feel like fucking with it
+          await userManager.push();
           setCurrentUserManager(userManager);
           navigation.navigate("dashboard");
         }
       });
     }
 
-    // Render the Login Page
     return (
     <PageWrapper>
       <View 

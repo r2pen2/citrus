@@ -68,18 +68,20 @@ git clone https://github.com/r2pen2/citrus.git ~/citrus   # or git pull
 sudo mkdir -p /opt/services/data/app-env /opt/services/data/app-assets/citrus-mongo
 sudo cp ~/citrus/deploy/compose/citrus-api.env.example /opt/services/data/app-env/citrus-api.env
 JWT=$(openssl rand -base64 48)
-# put JWT into JWT_SECRET= and set GOOGLE_CLIENT_IDS= in citrus-api.env
+# put JWT into JWT_SECRET= in citrus-api.env (GOOGLE_CLIENT_IDS optional for mobile)
 sudo nano /opt/services/data/app-env/citrus-api.env
 bash ~/citrus/scripts/glados-bring-up.sh
 ```
+
+Browser auth uses Traefik `sso@file` (joed.dev Google SSO) → `POST /auth/sso`.
 
 ### Hostnames (Traefik labels)
 
 | Host | Service |
 |------|---------|
-| `citrus.joed.dev` | web |
-| `citrusnative.joed.dev` | native (Expo web export; native app later) |
-| `api.citrus.joed.dev` | api (prefer renaming to `citrus-api.joed.dev` for `*.joed.dev` SSL) |
+| `citrus.joed.dev` | web (behind `sso@file`) |
+| `citrusnative.joed.dev` | native (Expo web export; behind `sso@file`) |
+| `citrus-api.joed.dev` / `api.citrus.joed.dev` | api (`sso@file`; `/health` public) |
 
 Cloudflare Tunnel should point these at Traefik on glados (same as WL sites).
 
@@ -96,7 +98,6 @@ Cloudflare Tunnel should point these at Traefik on glados (same as WL sites).
 ```
 MONGODB_URI=mongodb://citrus-mongo:27017
 MONGODB_DB=citrus
-GOOGLE_CLIENT_IDS=...
 JWT_SECRET=...
 CORS_ORIGINS=https://citrus.joed.dev,https://citrusnative.joed.dev
 ```
