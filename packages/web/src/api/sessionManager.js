@@ -1,8 +1,8 @@
 // API Imports
+import { signOutUser } from "./firebase";
 import { RouteManager } from "./routeManager";
 import { DBManager } from "./db/dbManager";
 import { Debugger } from "./debugger";
-import { clearTokensAndSsoSignOut } from "./citrusApi";
 
 const sessionManagerDebugger = new Debugger(Debugger.controllerObjects.SESSIONMANAGER);
 
@@ -167,11 +167,12 @@ export class SessionManager {
     }
 
     /**
-     * Clear Citrus session and sign out of joed.dev Google SSO.
+     * Completely sign out user with firebase and redirect to /home
      */
     static signOut() {
-        this.clearLS();
-        clearTokensAndSsoSignOut();
+        signOutUser().then(() => {
+            RouteManager.redirect("/home");
+        });
     }
     
     static getTransactionsData() {

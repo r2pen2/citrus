@@ -1,5 +1,5 @@
 /**
- * Expo web export login — joed.dev SSO only (no Firebase / GoogleSignin native modules).
+ * Expo web export login — Firebase Google popup (citrus-v3), same uids as packages/web.
  */
 import { useContext, useEffect, useState } from "react";
 import { ActivityIndicator, Image, Text, View } from "react-native";
@@ -8,19 +8,18 @@ import { GoogleButton } from "../components/Button";
 import { CenteredTitle } from "../components/Text";
 import { PageWrapper } from "../components/Wrapper";
 import { CurrentUserContext } from "../Context";
-import { isWebSso, signInWithJoedSso } from "../api/auth";
+import { signInWithGoogle, waitForAuthUser } from "../api/auth";
 
 function makeWebUserManager(user) {
-  const pd = user.personalData || {};
-  const uid = user.id;
+  const uid = user.uid;
   return {
     documentId: uid,
     data: {
       personalData: {
-        displayName: pd.displayName || uid,
-        email: pd.email || uid,
-        phoneNumber: pd.phoneNumber || null,
-        pfpUrl: pd.pfpUrl || `https://robohash.org/${uid}`,
+        displayName: user.displayName || uid,
+        email: user.email || uid,
+        phoneNumber: user.phoneNumber || null,
+        pfpUrl: user.photoURL || `https://robohash.org/${uid}`,
       },
       relations: {},
       friends: [],
@@ -49,13 +48,18 @@ export default function Login({ navigation }) {
     let cancelled = false;
     (async () => {
       try {
-        await completeSso(cancelled);
-      } catch (err) {
-        if (!cancelled) {
-          console.error("SSO auto sign-in failed:", err);
-          setError(err?.message || "Sign-in failed");
-          setShowSpinner(false);
+        const user = await waitForAuthUser();
+        if (cancelled) return;
+        if (user) {
+          setCurrentUserManager(makeWebUserManager(user));
+          navigation.navigate("dashboard");
+          return;
         }
+      } catch (err) {
+        console.error("Auth restore failed:", err);
+      }
+      if (!cancelled) {
+        setShowSpinner(false);
       }
     })();
     return () => {
@@ -63,24 +67,18 @@ export default function Login({ navigation }) {
     };
   }, []);
 
-  async function completeSso(cancelled = false) {
+  async function handleGoogleClick() {
     setShowSpinner(true);
     setError(null);
-    const body = await signInWithJoedSso();
-    if (cancelled) return;
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem("citrus:accessToken", body.accessToken);
-    }
-    setCurrentUserManager(makeWebUserManager(body.user));
-    navigation.navigate("dashboard");
-  }
-
-  async function handleGoogleClick() {
     try {
-      await completeSso();
+      const user = await signInWithGoogle();
+      setCurrentUserManager(makeWebUserManager(user));
+      navigation.navigate("dashboard");
     } catch (err) {
-      console.error("SSO sign-in failed:", err);
-      setError(err?.message || "Sign-in failed");
+      console.error("Google sign-in failed:", err);
+      if (err?.code !== "auth/popup-closed-by-user" && err?.code !== "auth/cancelled-popup-request") {
+        setError(err?.message || "Sign-in failed");
+      }
       setShowSpinner(false);
     }
   }
@@ -109,9 +107,7 @@ export default function Login({ navigation }) {
         ) : null}
         {!showSpinner && <GoogleButton onClick={handleGoogleClick} />}
         {showSpinner && <ActivityIndicator size="large" />}
-        {isWebSso() ? (
-          <Text style={{ marginTop: 12, opacity: 0.7 }}>Uses your joed.dev Google SSO session</Text>
-        ) : null}
+        <Text style={{ marginTop: 12, opacity: 0.7 }}>Sign in with Google (Firebase)</Text>
       </View>
     </PageWrapper>
   );

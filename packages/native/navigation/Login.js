@@ -13,12 +13,11 @@ import { CurrentUserContext } from "../Context";
 
 // API Imports
 import { DBManager } from "../api/dbManager";
-import { googleAuth, isWebSso, signInWithJoedSso } from "../api/auth";
+import { googleAuth } from "../api/auth";
 
 /**
  * Component for handing user sign in. User is automatically taken to dashboard if they're already signed in.
- * Web export uses joed.dev Traefik SSO → POST /auth/sso.
- * Native mobile keeps Google Sign-In + Firebase (legacy).
+ * Native mobile: Google Sign-In + Firebase Auth (Firestore uid continuity).
  * @param {ReactNavigation} navigation navigation object from main app shell
  */
 export default function Login({navigation}) {
@@ -39,67 +38,14 @@ export default function Login({navigation}) {
   }
 
   async function checkSignIn() {
-    if (isWebSso()) {
-      setShowSpinner(true);
-      try {
-        await handleWebSso();
-      } catch (error) {
-        console.error("SSO auto sign-in failed:", error);
-        setShowSpinner(false);
-      }
-      return;
-    }
-
     const signedIn = await googleAuth.isSignedIn();
     setShowSpinner(false);
     if (signedIn) {
       handleGoogleClick();
     }
   }
-
-  /**
-   * joed.dev SSO (web export): exchange proxy identity for Citrus user session.
-   */
-  async function handleWebSso() {
-    setShowSpinner(true);
-    const body = await signInWithJoedSso();
-    const user = body.user;
-    const pd = user.personalData || {};
-    const uid = user.id;
-
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem("citrus:accessToken", body.accessToken);
-    }
-
-    const userManager = DBManager.getUserManager(uid);
-    const userAlreadyExists = await userManager.documentExists();
-    if (userAlreadyExists) {
-      await userManager.fetchData();
-      setCurrentUserManager(userManager);
-      navigation.navigate("dashboard");
-      return;
-    }
-
-    userManager.setCreatedAt(new Date());
-    userManager.setDisplayName(pd.displayName || uid);
-    userManager.setEmail(pd.email || uid);
-    userManager.setPfpUrl(pd.pfpUrl || `https://robohash.org/${uid}`);
-    await userManager.push();
-    setCurrentUserManager(userManager);
-    navigation.navigate("dashboard");
-  }
   
   async function handleGoogleClick() {
-    if (isWebSso()) {
-      try {
-        await handleWebSso();
-      } catch (error) {
-        console.error("SSO sign-in failed:", error);
-        setShowSpinner(false);
-      }
-      return;
-    }
-
       let hasPlay = await googleAuth.hasPlayServices({ showPlayServicesUpdateDialog: true });
       void hasPlay;
       const { idToken } = await googleAuth.signIn();

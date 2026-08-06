@@ -1,3 +1,6 @@
+/**
+ * Optional Citrus Mongo API client. Browser login uses Firebase Google, not SSO.
+ */
 const DEFAULT_API_URL = "https://citrus-api.joed.dev";
 
 export function getApiBaseUrl() {
@@ -11,9 +14,6 @@ export function getApiBaseUrl() {
   return base;
 }
 
-/**
- * Browser → Citrus API with joed.dev SSO cookies.
- */
 export async function apiFetch(path, options = {}) {
   const url = `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
   const headers = {
@@ -22,6 +22,14 @@ export async function apiFetch(path, options = {}) {
   };
   if (options.body && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
+  }
+
+  const token =
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("citrus:accessToken")
+      : null;
+  if (token && !headers.Authorization) {
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const res = await fetch(url, {
@@ -50,8 +58,4 @@ export async function apiFetch(path, options = {}) {
     throw err;
   }
   return body;
-}
-
-export function exchangeSsoSession() {
-  return apiFetch("/auth/sso", { method: "POST" });
 }

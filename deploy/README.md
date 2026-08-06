@@ -73,15 +73,15 @@ sudo nano /opt/services/data/app-env/citrus-api.env
 bash ~/citrus/scripts/glados-bring-up.sh
 ```
 
-Browser auth uses Traefik `sso@file` (joed.dev Google SSO) → `POST /auth/sso`.
+Browser auth is Firebase Google (popup) against the existing `citrus-v3` Firestore. Traefik does **not** gate apps with `sso@file`.
 
 ### Hostnames (Traefik labels)
 
 | Host | Service |
 |------|---------|
-| `citrus.joed.dev` | web (behind `sso@file`) |
-| `citrusnative.joed.dev` | native (Expo web export; behind `sso@file`) |
-| `citrus-api.joed.dev` / `api.citrus.joed.dev` | api (`sso@file`; `/health` public) |
+| `citrus.joed.dev` | web |
+| `citrusnative.joed.dev` | native (Expo web export) |
+| `citrus-api.joed.dev` / `api.citrus.joed.dev` | api |
 
 Cloudflare Tunnel should point these at Traefik on glados (same as WL sites).
 

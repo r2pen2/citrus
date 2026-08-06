@@ -1,16 +1,16 @@
+/**
+ * Optional Citrus Mongo API client (not used for browser login — that is Firebase Google).
+ * Kept for future migration; POST /auth/sso is unused by the UIs.
+ */
 const DEFAULT_API_URL = "https://citrus-api.joed.dev";
 
 export function getApiBaseUrl() {
   const fromEnv = (process.env.REACT_APP_API_URL || "").trim();
   let base = (fromEnv || DEFAULT_API_URL).replace(/\/$/, "");
-  // api.citrus.joed.dev often has no public DNS; normalize to the working host.
   base = base.replace("://api.citrus.joed.dev", "://citrus-api.joed.dev");
   return base;
 }
 
-/**
- * Browser → Citrus API. Sends joed.dev SSO cookies (credentials: include).
- */
 export async function apiFetch(path, options = {}) {
   const url = `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
   const headers = new Headers(options.headers || {});
@@ -48,19 +48,4 @@ export async function apiFetch(path, options = {}) {
     throw err;
   }
   return body;
-}
-
-/** Exchange Traefik SSO session for a Citrus JWT. */
-export function exchangeSsoSession() {
-  return apiFetch("/auth/sso", { method: "POST" });
-}
-
-const SSO_SIGN_OUT =
-  "https://auth.joed.dev/oauth2/sign_out?rd=https://citrus.joed.dev/";
-
-/** Clear Citrus tokens and redirect through joed.dev SSO sign-out. */
-export function clearTokensAndSsoSignOut() {
-  localStorage.removeItem("citrus:accessToken");
-  localStorage.removeItem("citrus:accessTokenExpiresAt");
-  window.location.href = SSO_SIGN_OUT;
 }

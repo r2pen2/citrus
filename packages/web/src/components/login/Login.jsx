@@ -7,18 +7,23 @@ import { CircularProgress, Paper, Typography } from "@mui/material";
 import { Route, Routes } from "react-router-dom";
 
 // Component Imports
+import Phone from "./routes/Phone";
+import NewUserForm from "./routes/NewUserForm";
 import LoginHome from "./routes/LoginHome";
 import { SpinningLogo } from "../resources/Login";
 
 // API imports
-import { finishSsoSignInIfNeeded } from "../../api/authBootstrap";
+import { finishGoogleSignInIfNeeded } from "../../api/authBootstrap";
 import { BrowserManager } from "../../api/browserManager";
+import { SessionManager } from "../../api/sessionManager";
 
 /**
  * Wrapper for all Login related routes
  */
 export default function Login() {
-  const [bootstrapping, setBootstrapping] = useState(true);
+  const [bootstrapping, setBootstrapping] = useState(
+    () => !!SessionManager.getCurrentUser()
+  );
 
   useEffect(() => {
     BrowserManager.setTitle("Login");
@@ -28,8 +33,7 @@ export default function Login() {
     async function bootstrap() {
       let started = false;
       try {
-        // Auto-exchange joed.dev SSO cookie → Citrus JWT when possible.
-        started = await finishSsoSignInIfNeeded();
+        started = await finishGoogleSignInIfNeeded();
       } catch (error) {
         console.error("Login auth bootstrap failed:", error);
       } finally {
@@ -54,7 +58,7 @@ export default function Login() {
             <SpinningLogo />
             <div className="login-input-window center-contents-column">
               <CircularProgress />
-              <Typography marginTop="16px">Signing in with joed.dev SSO…</Typography>
+              <Typography marginTop="16px">Finishing sign-in…</Typography>
             </div>
           </div>
         </Paper>
@@ -73,6 +77,10 @@ export default function Login() {
               <Route path="/home" element={<LoginHome/>}/>
               <Route path="/login" element={<LoginHome/>}/>
               <Route path="/login/home" element={<LoginHome/>}/>
+              <Route path="/phone" element={<Phone/>}/>
+              <Route path="/login/phone" element={<Phone/>}/>
+              <Route path="/account-creation" element={<NewUserForm/>}/>
+              <Route path="/login/account-creation" element={<NewUserForm/>}/>
             </Routes>
           </div>
         </div>

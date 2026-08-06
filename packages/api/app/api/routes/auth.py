@@ -23,8 +23,8 @@ async def auth_google(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> AuthResponse:
     """
-    Exchange a Google ID token for a Citrus access token.
-    Kept for native mobile; browser clients use POST /auth/sso via joed.dev SSO.
+    Exchange a Google ID token for a Citrus access token (Mongo JWT path).
+    Browser UIs use Firebase Google Auth directly against Firestore.
     """
     return await auth_service.login_with_google(body.id_token)
 
@@ -37,8 +37,8 @@ async def auth_sso(
     x_auth_request_preferred_username: Annotated[str | None, Header()] = None,
 ) -> AuthResponse:
     """
-    Exchange joed.dev Traefik/oauth2-proxy identity headers for a Citrus JWT.
-    Requires the request to have passed sso@file (headers injected by Traefik).
+    Legacy Traefik/oauth2-proxy SSO → JWT. Unused by current UIs (Firebase Google).
+    Kept for compatibility if headers are still injected upstream.
     """
     return await auth_service.login_with_sso(
         email=x_auth_request_email,

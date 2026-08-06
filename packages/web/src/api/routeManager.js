@@ -17,6 +17,19 @@ export class RouteManager {
      * @param {string} destination window.location to send user to
      */
     static redirect(destination) {
+        // Avoid full reloads when already on the target path (boot-loop guard).
+        try {
+            const next = new URL(destination, window.location.origin);
+            if (
+                next.origin === window.location.origin &&
+                next.pathname === window.location.pathname &&
+                next.search === window.location.search
+            ) {
+                return;
+            }
+        } catch {
+            // Fall through to assign if URL parsing fails.
+        }
         // routeDebugger.logWithPrefix("Redirecting user to " + destination);
         window.location = destination;
     }

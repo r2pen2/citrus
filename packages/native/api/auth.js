@@ -1,31 +1,23 @@
-/**
- * Native (iOS/Android) Google Sign-In client.
- * Web uses auth.web.js (platform resolution) — keep this file free of web bundling.
- */
+// Library Imports
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
-import { exchangeSsoSession } from "./citrusApi";
-
+// Create Google authentication client with this application's credentials
 GoogleSignin.configure({
-  webClientId:
-    "153123374119-83abbudbfvqubbn46im8dvimmgvhip51.apps.googleusercontent.com",
+    webClientId: '153123374119-83abbudbfvqubbn46im8dvimmgvhip51.apps.googleusercontent.com',
 });
 
+// Export Google authentication client
 export const googleAuth = GoogleSignin;
 
-const SSO_SIGN_OUT =
-  "https://auth.joed.dev/oauth2/sign_out?rd=https://citrusnative.joed.dev/";
-
-export async function signInWithJoedSso() {
-  return exchangeSsoSession();
-}
-
+/** Always false on native mobile — web uses auth.web.js. */
 export function isWebSso() {
   return false;
 }
 
+export async function signInWithJoedSso() {
+  throw new Error("joed.dev SSO is not used on native mobile.");
+}
+
 export function ssoSignOutRedirect() {
-  if (typeof window !== "undefined") {
-    window.location.href = SSO_SIGN_OUT;
-  }
+  // no-op on native; Settings uses googleAuth.signOut()
 }

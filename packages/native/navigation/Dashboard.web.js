@@ -1,6 +1,6 @@
 /**
- * Expo web Dashboard — no Firestore (@react-native-firebase has no onSnapshot on web).
- * Shows SSO session + settings/sign-out. Full ledger UI stays on native / API migration.
+ * Expo web Dashboard — no Firestore listeners (@react-native-firebase has no onSnapshot on web).
+ * Shows Firebase Google session + settings/sign-out. Full ledger UI stays on native / citrus.joed.dev.
  */
 import { useContext } from "react";
 import { Image, Text, View } from "react-native";
@@ -54,8 +54,9 @@ function WebHome({ navigation }) {
             maxWidth: 420,
           }}
         >
-          Signed in with joed.dev Google SSO. The full native ledger still uses
-          Firestore listeners, which are not available in this web export yet.
+          Signed in with Google (Firebase). The full native ledger still uses
+          Firestore listeners, which are not available in this web export yet —
+          use citrus.joed.dev for the full web app.
         </Text>
         <View style={{ marginTop: 28, width: "100%", maxWidth: 320 }}>
           <StyledButton
