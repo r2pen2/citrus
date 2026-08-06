@@ -15,7 +15,8 @@ services:
     labels:
       com.centurylinklabs.watchtower.enable: "true"
       traefik.enable: "true"
-      traefik.http.routers.citrus-api.rule: Host(`api.citrus.joed.dev`)
+      # Prefer first-level label for Universal SSL (*.joed.dev)
+      traefik.http.routers.citrus-api.rule: Host(`citrus-api.joed.dev`) || Host(`api.citrus.joed.dev`)
       traefik.http.routers.citrus-api.entrypoints: web
       traefik.http.services.citrus-api.loadbalancer.server.port: "8000"
       traefik.docker.network: proxy

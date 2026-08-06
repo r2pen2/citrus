@@ -26,7 +26,34 @@ GitHub Actions (`publish-app-images.yml`):
 1. Detects which of `api` / `web` / `native` / `mongo` catalog entries changed (mongo compose-only)
 2. Builds & pushes `ghcr.io/<owner>/citrus-<app>:{latest,sha}`
 3. Self-hosted runner labels: `self-hosted`, `glados`
-4. Copies compose into `/opt/services/apps/<app>/compose.yml` and `up -d`
+4. Copies compose into `/opt/services/apps/citrus-<app>/compose.yml` and `up -d`
+
+### Critical: runner must be registered on **this** repo
+
+The WL-Universe `glados` runner is **repo-scoped to WL-Universe**.  
+`r2pen2/citrus` currently has **zero** self-hosted runners, so `deploy on glados` queues forever and Traefik keeps returning `404 page not found`.
+
+Fix one of:
+
+1. **Add a runner for citrus** (Settings → Actions → Runners → New) with labels `self-hosted`, `glados`, or  
+2. **Org/user-level runner** shared across repos, or  
+3. **Manual bring-up on glados** (below) after images are in GHCR.
+
+Cloudflare is fine if you already see Traefik’s plain `404 page not found` — tunnel works; **no container** has the Host rule yet. This is not an API wiring issue (`citrus.joed.dev` is the static web image).
+
+### Manual bring-up (works right now)
+
+On glados:
+
+```bash
+git clone https://github.com/r2pen2/citrus.git ~/citrus   # or git pull
+# if GHCR packages are private:
+#   echo TOKEN | sudo docker login ghcr.io -u r2pen2 --password-stdin
+sudo mkdir -p /opt/services/data/app-env /opt/services/data/app-assets/citrus-mongo
+sudo cp ~/citrus/deploy/compose/citrus-api.env.example /opt/services/data/app-env/citrus-api.env
+# edit secrets in citrus-api.env
+bash ~/citrus/scripts/glados-bring-up.sh
+```
 
 ### Hostnames (Traefik labels)
 
@@ -34,7 +61,7 @@ GitHub Actions (`publish-app-images.yml`):
 |------|---------|
 | `citrus.joed.dev` | web |
 | `citrusnative.joed.dev` | native (Expo web export; native app later) |
-| `api.citrus.joed.dev` | api |
+| `api.citrus.joed.dev` | api (prefer renaming to `citrus-api.joed.dev` for `*.joed.dev` SSL) |
 
 Cloudflare Tunnel should point these at Traefik on glados (same as WL sites).
 
