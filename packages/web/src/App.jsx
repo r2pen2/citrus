@@ -32,17 +32,21 @@ const skipHomePage = true;
 
 function App() {
 
-  // Keep localStorage in sync with Firebase Auth.
-  // Login finishes redirect/popup sign-in (and sends users to /dashboard).
-  // Do not call finishGoogleSignInIfNeeded here on every mount — that always
-  // hard-redirected to /dashboard and boot-looped once a session existed.
+  // Keep localStorage in sync with Firebase Auth once the first auth event fires.
+  // Do not clear LS on the initial null (persistence may still be restoring) — that
+  // wiped userId and caused Dashboard↔Login reload loops on citrus.joed.dev.
   useEffect(() => {
+    let ready = false;
     const unsubscribe = auth.onAuthStateChanged((authUser) => {
       if (authUser) {
         SessionManager.setCurrentUser(toSessionUser(authUser));
-      } else if (SessionManager.getCurrentUser()) {
+        ready = true;
+        return;
+      }
+      if (ready && SessionManager.getCurrentUser()) {
         SessionManager.clearLS();
       }
+      ready = true;
     });
 
     return () => {
