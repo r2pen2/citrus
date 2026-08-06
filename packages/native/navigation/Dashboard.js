@@ -75,8 +75,12 @@ export default function Dashboard({navigation}) {
     }
   }, [currentUserManager]);
 
-  // Subscribe to realtime updates for the currentUserManager on component mount
-  useEffect(() => { subscribeToSelf(); }, []);
+  // Subscribe to realtime updates whenever we have (or replace) a current user
+  useEffect(() => {
+    if (currentUserManager?.docRef?.onSnapshot) {
+      subscribeToSelf();
+    }
+  }, [currentUserManager?.documentId]);
 
   /**
    * If there's already a listener on the currentUserManager, unsubscribe it.
@@ -85,7 +89,6 @@ export default function Dashboard({navigation}) {
    * @async
    */
   async function subscribeToSelf() {
-    // Web SSO stub managers have no Firestore docRef (RN Firebase is native-only).
     if (!currentUserManager?.docRef?.onSnapshot) {
       return;
     }

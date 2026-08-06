@@ -1,7 +1,7 @@
 // Library Imports
 import { useContext, useEffect, useState, } from "react";
 import { Alert, Image, Keyboard, Pressable, View, } from "react-native";
-import firestore from "@react-native-firebase/firestore";
+import firestore from "../api/firestoreCompat";
 import { ScrollView, } from "react-native-gesture-handler";
 import { createStackNavigator, } from "@react-navigation/stack";
 

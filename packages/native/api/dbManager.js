@@ -1,5 +1,5 @@
 // Library Imports
-import firestore from "@react-native-firebase/firestore";
+import firestore from "./firestoreCompat";
 
 /**
  * @class Superclass extended by all Changes ({@link Add}. {@link Remove}. {@link Set}. {@link Update})

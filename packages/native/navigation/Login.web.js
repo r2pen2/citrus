@@ -1,5 +1,6 @@
 /**
- * Expo web export login — Firebase Google popup (citrusnative), same project as packages/web.
+ * Expo web login — Firebase Google popup + real Firestore user managers
+ * (same citrusnative project / listeners as native and packages/web).
  */
 import { useContext, useEffect, useState } from "react";
 import { ActivityIndicator, Image, Text, View } from "react-native";
@@ -9,34 +10,24 @@ import { CenteredTitle } from "../components/Text";
 import { PageWrapper } from "../components/Wrapper";
 import { CurrentUserContext } from "../Context";
 import { signInWithGoogle, waitForAuthUser } from "../api/auth";
+import { DBManager } from "../api/dbManager";
 
-function makeWebUserManager(user) {
-  const uid = user.uid;
-  return {
-    documentId: uid,
-    data: {
-      personalData: {
-        displayName: user.displayName || uid,
-        email: user.email || uid,
-        phoneNumber: user.phoneNumber || null,
-        pfpUrl: user.photoURL || `https://robohash.org/${uid}`,
-      },
-      relations: {},
-      friends: [],
-      groups: [],
-      incomingFriendRequests: [],
-      outgoingFriendRequests: [],
-      mutedUsers: [],
-      mutedGroups: [],
-      transactions: [],
-      notifications: [],
-    },
-    async push() {},
-    async fetchData() {},
-    async documentExists() {
-      return true;
-    },
-  };
+async function bootstrapUserManager(user) {
+  // Attach Auth ID token before first Firestore call (avoids permission-denied race).
+  await user.getIdToken();
+
+  const userManager = DBManager.getUserManager(user.uid);
+  const userAlreadyExists = await userManager.documentExists();
+  if (userAlreadyExists) {
+    await userManager.fetchData();
+  } else {
+    userManager.setCreatedAt(new Date());
+    userManager.setDisplayName(user.displayName);
+    userManager.setEmail(user.email);
+    userManager.setPfpUrl(user.photoURL || `https://robohash.org/${user.uid}`);
+    await userManager.push();
+  }
+  return userManager;
 }
 
 export default function Login({ navigation }) {
@@ -51,12 +42,17 @@ export default function Login({ navigation }) {
         const user = await waitForAuthUser();
         if (cancelled) return;
         if (user) {
-          setCurrentUserManager(makeWebUserManager(user));
+          const userManager = await bootstrapUserManager(user);
+          if (cancelled) return;
+          setCurrentUserManager(userManager);
           navigation.reset({ index: 0, routes: [{ name: "dashboard" }] });
           return;
         }
       } catch (err) {
         console.error("Auth restore failed:", err);
+        if (!cancelled) {
+          setError(err?.message || "Failed to restore session");
+        }
       }
       if (!cancelled) {
         setShowSpinner(false);
@@ -72,11 +68,15 @@ export default function Login({ navigation }) {
     setError(null);
     try {
       const user = await signInWithGoogle();
-      setCurrentUserManager(makeWebUserManager(user));
+      const userManager = await bootstrapUserManager(user);
+      setCurrentUserManager(userManager);
       navigation.reset({ index: 0, routes: [{ name: "dashboard" }] });
     } catch (err) {
       console.error("Google sign-in failed:", err);
-      if (err?.code !== "auth/popup-closed-by-user" && err?.code !== "auth/cancelled-popup-request") {
+      if (
+        err?.code !== "auth/popup-closed-by-user" &&
+        err?.code !== "auth/cancelled-popup-request"
+      ) {
         setError(err?.message || "Sign-in failed");
       }
       setShowSpinner(false);
@@ -101,13 +101,19 @@ export default function Login({ navigation }) {
         />
         <CenteredTitle text="Citrus" fontSize={30} />
         {error ? (
-          <Text style={{ color: "#c62828", marginTop: 12, paddingHorizontal: 24, textAlign: "center" }}>
+          <Text
+            style={{
+              color: "#c62828",
+              marginTop: 12,
+              paddingHorizontal: 24,
+              textAlign: "center",
+            }}
+          >
             {error}
           </Text>
         ) : null}
         {!showSpinner && <GoogleButton onClick={handleGoogleClick} />}
         {showSpinner && <ActivityIndicator size="large" />}
-        <Text style={{ marginTop: 12, opacity: 0.7 }}>Sign in with Google (Firebase)</Text>
       </View>
     </PageWrapper>
   );
